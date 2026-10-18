@@ -1,0 +1,140 @@
+{
+  "format": 1,
+  "generated": "2026-10-18T10:24:50+00:00",
+  "setups": [
+    {
+      "id": "big-pills-expanded",
+      "title": "Big Pills Expanded",
+      "author": "travishepworth",
+      "description": "Test e2e lkjasdlfkjasdflkjasdflkjasdflkjasdflkajsdflkajsdflkasjdflkajsdflkasjdflkajsdflkajsdflkajsdflkjasdflkj",
+      "about": "",
+      "tags": [
+        "dark"
+      ],
+      "tested": [
+        "hyprland",
+        "niri",
+        "sway"
+      ],
+      "fonts": [
+        "Inter"
+      ],
+      "theme": "rose-pine",
+      "configVersion": 69,
+      "wallpaper": null,
+      "updated": "2026-10-18T19:24:33+09:00",
+      "page": "https://github.com/axiom-dotfiles/community-setups/tree/main/setups/big-pills-expanded",
+      "files": {
+        "config": {
+          "path": "setups/big-pills-expanded/config.json",
+          "sha256": "37ede315f41716e01abb7392473b54e3c74a7ba71d303bfdeaa771bfbb4c00d7",
+          "size": 23946
+        },
+        "screenshot": {
+          "path": "setups/big-pills-expanded/screenshot.png",
+          "sha256": "fc24aeef024cf81a1f3b1cdafd064f2d273b8d14b82f6d086a202a75df2e6b31",
+          "size": 2269888
+        },
+        "thumb": {
+          "path": "setups/big-pills-expanded/thumb.webp",
+          "sha256": "a1483e430864a8b932a34ff15cecc30b3cefbd0de8c62145b07814f81c2d95b5",
+          "size": 20000
+        }
+      }
+    },
+    {
+      "id": "test-harbor-night",
+      "title": "Test: Harbor Night",
+      "author": "travishepworth",
+      "description": "TEMPORARY test setup for axiom's gallery: big pills, a bundled palette and a wallpaper",
+      "about": "Made by a script to test the catalog and axiom's gallery. **Will be removed.**",
+      "tags": [
+        "dark",
+        "pills",
+        "floating"
+      ],
+      "tested": [
+        "hyprland"
+      ],
+      "fonts": [
+        "Inter"
+      ],
+      "theme": "community/test-harbor-night",
+      "configVersion": 69,
+      "wallpaper": {
+        "license": "own",
+        "source": "own",
+        "credit": "generated"
+      },
+      "updated": "2026-10-18T17:44:47+09:00",
+      "page": "https://github.com/axiom-dotfiles/community-setups/tree/main/setups/test-harbor-night",
+      "files": {
+        "config": {
+          "path": "setups/test-harbor-night/config.json",
+          "sha256": "bcbaab32b21d72eb19b77b89544fb2ea7b9d3f336cfce2470027d6e0e4a5f062",
+          "size": 18891
+        },
+        "theme": {
+          "path": "setups/test-harbor-night/theme.json",
+          "sha256": "fb800495ee3a617ea29393109d3c4c335468618f5b6a28911c95eaf78d55aa4a",
+          "size": 513
+        },
+        "screenshot": {
+          "path": "setups/test-harbor-night/screenshot.png",
+          "sha256": "43ac60538891ffc7913f0e8aee52c96669ddfcd76ea0326ceded924d97136610",
+          "size": 24889
+        },
+        "thumb": {
+          "path": "setups/test-harbor-night/thumb.webp",
+          "sha256": "d5fdf6dabe2f86eb66a9c734851f40905b0c9531e6effe6fc13a0c924abea61d",
+          "size": 4532
+        },
+        "wallpaper": {
+          "path": "setups/test-harbor-night/wallpaper.jpg",
+          "sha256": "3316cf568a5ae013c525fcb867e32945080738f11eea52a995a24377f3071048",
+          "size": 80548
+        }
+      }
+    },
+    {
+      "id": "test-plain-powerline",
+      "title": "Test: Powerline",
+      "author": "travishepworth",
+      "description": "TEMPORARY test setup for axiom's gallery: powerline arrows on Dracula",
+      "about": "",
+      "tags": [
+        "dark",
+        "powerline"
+      ],
+      "tested": [
+        "hyprland",
+        "sway"
+      ],
+      "fonts": [
+        "CaskaydiaCove Nerd Font"
+      ],
+      "theme": "dracula",
+      "configVersion": 69,
+      "wallpaper": null,
+      "updated": "2026-10-18T17:44:47+09:00",
+      "page": "https://github.com/axiom-dotfiles/community-setups/tree/main/setups/test-plain-powerline",
+      "files": {
+        "config": {
+          "path": "setups/test-plain-powerline/config.json",
+          "sha256": "117322a5f2a3d6860567e9cdb4611194b262843bc1f75e9c81688c2993876194",
+          "size": 17703
+        },
+        "screenshot": {
+          "path": "setups/test-plain-powerline/screenshot.png",
+          "sha256": "ecd940e5d2bc85af79a0d4e8ba0690cea442bb9306e65605bf013e35909aaeef",
+          "size": 22194
+        },
+        "thumb": {
+          "path": "setups/test-plain-powerline/thumb.webp",
+          "sha256": "87882f2d70bd76eb277ceece4bf6528870b5e77e4ea93bc817640d2ca6ea3099",
+          "size": 3702
+        }
+      }
+    }
+  ]
+}
