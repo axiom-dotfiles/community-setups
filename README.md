@@ -61,9 +61,9 @@ Every submission is checked against axiom's current `main` (its schema, themes a
 | `scripts/validate.py --fix ID` | Writes `config.json`'s `_example` header from `setup.json` |
 | `scripts/build_index.py OUT` | The catalog axiom reads and its gallery page (published as the [`catalog`](../../tree/catalog) branch) |
 | `tests/test_validate.py`, `tests/test_issue.py` | The checks' own tests |
-| `.github/workflows/` | `validate` (pull requests, main, nightly), `publish` (catalog + gallery after a merge), `submission` (issue → pull request, then `validate` on its branch) |
+| `.github/workflows/` | `validate` (the setups a pull request, merge or submission touches), `publish` (catalog + gallery after a merge), `submission` (issue → pull request, then `validate` on its branch) |
 
-The axiom checkout comes from `--axiom DIR`, else `$AXIOM_DIR`, else `.axiom/`. CI always clones axiom's `main`, so the checks follow axiom with no pinning. The nightly run opens a `needs-update` issue when a change in axiom breaks a setup.
+The axiom checkout comes from `--axiom DIR`, else `$AXIOM_DIR`, else `.axiom/`. CI clones axiom's `main`, so a setup is checked against axiom as it is the day the setup is posted or changed, and never again: axiom migrates an older setup's config when someone applies it, as it does any import. A run checks only the setups it touches (`workflow_dispatch` with `all` checks every one).
 
 `main` is protected: changes land through a squashed pull request with the `validate` check passing and a code owner's approval (admins may merge their own). The `catalog` branch can't be deleted. CI force-pushes it.
 
