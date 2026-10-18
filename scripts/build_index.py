@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Build the catalog axiom reads, and the README's gallery.
+"""Build the catalog axiom reads, with its gallery page.
 
-    scripts/build_index.py OUT [--readme README.md]
+    scripts/build_index.py OUT
 
 OUT gets index.json plus each setup's files under setups/<id>/ (and a
 640px thumb.webp), so the catalog is one consistent snapshot: CI
 force-pushes it as the `catalog` branch, and axiom fetches
 <catalog>/index.json, then files by their `path` relative to it, checking
-each one's sha256. Run it after scripts/check.sh passes: it doesn't check.
+each one's sha256. Its README.md is the gallery GitHub shows on that
+branch (main is protected, so nothing is committed there).
+Run it after scripts/check.sh passes: it doesn't check.
 """
 
 import argparse
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -25,8 +26,6 @@ REPO = "axiom-dotfiles/community-setups"
 CATALOG_URL = f"https://raw.githubusercontent.com/{REPO}/catalog/"
 FORMAT = 1
 THUMB_WIDTH = 640
-GALLERY_START = "<!-- gallery:start -->"
-GALLERY_END = "<!-- gallery:end -->"
 GALLERY_COLUMNS = 3
 
 
@@ -127,7 +126,7 @@ def gallery(index):
     """The README table: newest first, linking each thumbnail to its folder"""
     setups = index["setups"]
     if not setups:
-        return "_No setups yet. [Be the first](CONTRIBUTING.md)._"
+        return f"_No setups yet. [Be the first](https://github.com/{REPO}/blob/main/CONTRIBUTING.md)._"
     rows = []
     for i in range(0, len(setups), GALLERY_COLUMNS):
         chunk = setups[i:i + GALLERY_COLUMNS]
@@ -135,8 +134,9 @@ def gallery(index):
         for s in chunk:
             thumb = CATALOG_URL + s["files"]["thumb"]["path"]
             alt = s["title"].replace('"', "'")
+            page = f"https://github.com/{REPO}/tree/main/setups/{s['id']}"
             cells.append(
-                f'<a href="setups/{s["id"]}"><img src="{thumb}" alt="{alt}"></a><br>'
+                f'<a href="{page}"><img src="{thumb}" alt="{alt}"></a><br>'
                 f'<b>{s["title"]}</b> · <a href="https://github.com/{s["author"]}">@{s["author"]}</a><br>'
                 f'<sub>{s["description"]}</sub>'
             )
@@ -147,26 +147,25 @@ def gallery(index):
     return "\n".join([rows[0], separator] + rows[1:])
 
 
-def update_readme(path, index):
-    text = Path(path).read_text()
-    pattern = re.compile(re.escape(GALLERY_START) + r".*?" + re.escape(GALLERY_END), re.S)
-    if not pattern.search(text):
-        sys.exit(f"{path} has no {GALLERY_START} … {GALLERY_END} block")
-    new = pattern.sub(lambda _: f"{GALLERY_START}\n{gallery(index)}\n{GALLERY_END}", text)
-    if new != text:
-        Path(path).write_text(new)
-        print(f"updated the gallery in {path}")
+def gallery_page(index):
+    """The catalog branch's README: the gallery, newest first"""
+    return f"""# axiom community setups: gallery
+
+Every setup in [{REPO}](https://github.com/{REPO}), newest first. Apply one from axiom (Settings → Maintenance → Community setups), or see [how to submit yours](https://github.com/{REPO}/blob/main/CONTRIBUTING.md).
+
+This branch is the catalog axiom reads, rebuilt by CI after every merge: don't edit it.
+
+{gallery(index)}
+"""
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("out")
-    parser.add_argument("--readme", help="rewrite this README's gallery block")
     args = parser.parse_args()
     index = build(Path(args.out))
+    (Path(args.out) / "README.md").write_text(gallery_page(index))
     print(f"{len(index['setups'])} setups in {args.out}/index.json")
-    if args.readme:
-        update_readme(args.readme, index)
 
 
 if __name__ == "__main__":

@@ -12,9 +12,7 @@ A setup is the look and layout of an axiom desktop: its bars and their style, ov
 
 ## Gallery
 
-<!-- gallery:start -->
-_No setups yet. [Be the first](CONTRIBUTING.md)._
-<!-- gallery:end -->
+**[Browse the gallery →](../../tree/catalog#readme)** (rebuilt after every merge, newest first).
 
 ## Apply one
 
@@ -61,11 +59,13 @@ Every submission is checked against axiom's current `main` (its schema, themes a
 |---|---|
 | `scripts/check.sh [ID…]` | Everything CI checks: each config is loaded through axiom's own migration code (Qt 6's `qmltestrunner` on an axiom checkout), then `scripts/validate.py` |
 | `scripts/validate.py --fix ID` | Writes `config.json`'s `_example` header from `setup.json` |
-| `scripts/build_index.py OUT` | The catalog axiom reads (published as the [`catalog`](../../tree/catalog) branch) |
+| `scripts/build_index.py OUT` | The catalog axiom reads and its gallery page (published as the [`catalog`](../../tree/catalog) branch) |
 | `tests/test_validate.py`, `tests/test_issue.py` | The checks' own tests |
-| `.github/workflows/` | `validate` (pull requests, main, nightly), `publish` (catalog + gallery after a merge), `submission` (issue → pull request) |
+| `.github/workflows/` | `validate` (pull requests, main, nightly), `publish` (catalog + gallery after a merge), `submission` (issue → pull request, then `validate` on its branch) |
 
 The axiom checkout comes from `--axiom DIR`, else `$AXIOM_DIR`, else `.axiom/`. CI always clones axiom's `main`, so the checks follow axiom with no pinning. The nightly run opens a `needs-update` issue when a change in axiom breaks a setup.
+
+`main` is protected: changes land through a squashed pull request with the `validate` check passing and a code owner's approval (admins may merge their own). The `catalog` branch can't be deleted. CI force-pushes it.
 
 The catalog is `https://raw.githubusercontent.com/axiom-dotfiles/community-setups/catalog/index.json`. Each setup's files are listed with their `path` (relative to the index), `sha256` and `size`.
 
