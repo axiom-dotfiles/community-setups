@@ -200,9 +200,15 @@ def write_json(path, value):
     tmp.replace(path)
 
 
-def one_file(folder, stem):
-    found = [p for p in folder.iterdir() if p.is_file() and p.stem == stem and p.suffix.lower() in IMAGE_EXTS]
-    return found
+def symlinks(folder):
+    """The symlinks in a setup's folder (itself included), relative to it"""
+    found = ["."] if folder.is_symlink() else []
+    return found + sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_symlink())
+
+
+def images(folder, stem):
+    """The folder's `stem`.png/.jpg/.jpeg/.webp files"""
+    return [p for p in folder.iterdir() if p.is_file() and p.stem == stem and p.suffix.lower() in IMAGE_EXTS]
 
 
 def check_image(path, folder, report, max_bytes, screenshot=False):
@@ -290,9 +296,17 @@ def check_setup(folder, axiom, fix=False, loaded=None):
     if not ID_RE.match(setup_id) or len(setup_id) > 40:
         report.error(f"folder name {setup_id!r}: lowercase letters, digits and dashes, at most 40", ".")
 
-    allowed = {"setup.json", "config.json", "theme.json", "extra"}
+    # A symlink would make the published catalog copy whatever it points
+    # at, on the runner that builds it
+    links = symlinks(folder)
+    for name in links:
+        report.error("a symlink: add the file itself", name)
+    if links:
+        return report
+
+    allowed = {"setup.json", "config.json", "theme.json"}
     for entry in folder.iterdir():
-        if entry.name in allowed or (entry.is_file() and entry.stem in ("screenshot", "wallpaper") and entry.suffix.lower() in IMAGE_EXTS):
+        if (entry.name in allowed and entry.is_file()) or (entry.name == "extra" and entry.is_dir()) or (entry.is_file() and entry.stem in ("screenshot", "wallpaper") and entry.suffix.lower() in IMAGE_EXTS):
             continue
         report.error(f"unexpected file {entry.name!r}", entry.name)
 
@@ -306,12 +320,12 @@ def check_setup(folder, axiom, fix=False, loaded=None):
     check_manifest(manifest, report)
 
     # Images
-    shots = one_file(folder, "screenshot")
+    shots = images(folder, "screenshot")
     if len(shots) != 1:
         report.error("needs exactly one screenshot.png, .jpg or .webp", ".")
     else:
         check_image(shots[0], folder, report, SCREENSHOT_MAX, screenshot=True)
-    walls = one_file(folder, "wallpaper")
+    walls = images(folder, "wallpaper")
     if len(walls) > 1:
         report.error("at most one wallpaper file", ".")
     for wall in walls:
@@ -321,12 +335,12 @@ def check_setup(folder, axiom, fix=False, loaded=None):
     if manifest.get("wallpaper") and not walls:
         report.error("`wallpaper` is set but there's no wallpaper file")
     extra = folder / "extra"
-    if extra.exists():
-        images = sorted(p for p in extra.iterdir())
-        if len(images) > EXTRA_COUNT:
+    if extra.is_dir():
+        shots = sorted(extra.iterdir())
+        if len(shots) > EXTRA_COUNT:
             report.error(f"at most {EXTRA_COUNT} extra screenshots", "extra")
-        for p in images:
-            if p.suffix.lower() not in IMAGE_EXTS:
+        for p in shots:
+            if not p.is_file() or p.suffix.lower() not in IMAGE_EXTS:
                 report.error(f"unexpected file {p.name!r}", f"extra/{p.name}")
             else:
                 check_image(p, folder, report, EXTRA_MAX)
@@ -342,7 +356,8 @@ def check_setup(folder, axiom, fix=False, loaded=None):
     if not isinstance(config, dict):
         return report
     version = config.get("version")
-    if not isinstance(version, int) or version < 1:
+    # bool is an int in Python, but not a version to axiom
+    if type(version) is not int or version < 1:
         report.error("no `version`: export it from axiom rather than copying config.json", "config.json")
     elif version > axiom.version:
         report.error(f"version {version} is newer than axiom main ({axiom.version})", "config.json")

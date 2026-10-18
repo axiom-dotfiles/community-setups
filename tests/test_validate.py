@@ -30,6 +30,10 @@ THEME = {
 }
 
 
+class Symlink(str):
+    """A file written as a symlink to this target"""
+
+
 def good(axiom):
     return {
         "setup.json": {
@@ -92,6 +96,9 @@ CASES = {
     "wallpaper-no-license": (lambda f: f.__setitem__("wallpaper.jpg", (1920, 1080)), "needs `wallpaper.license`"),
     "license-no-wallpaper": (with_manifest(lambda m: m.__setitem__("wallpaper", {"license": "CC0-1.0", "source": "own"})), "no wallpaper file"),
     "stray-file": (lambda f: f.__setitem__("run.sh", "echo hi"), "unexpected file 'run.sh'"),
+    "extra-not-a-folder": (lambda f: f.__setitem__("extra", "x"), "unexpected file 'extra'"),
+    "symlink": (lambda f: f.__setitem__("theme.json", Symlink("/etc/hostname")), "a symlink"),
+    "bool-version": (with_config(lambda c: c.__setitem__("version", True)), "no `version`"),
     "Bad_Id": (lambda f: None, "folder name"),
 }
 
@@ -100,7 +107,9 @@ def write_setup(folder, files):
     folder.mkdir(parents=True)
     for name, value in files.items():
         path = folder / name
-        if isinstance(value, tuple):
+        if isinstance(value, Symlink):
+            path.symlink_to(value)
+        elif isinstance(value, tuple):
             Image.new("RGB", value, (40, 44, 52)).save(path)
         elif isinstance(value, dict):
             text = json.dumps(value).replace("{id}", folder.name)
