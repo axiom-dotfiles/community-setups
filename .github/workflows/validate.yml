@@ -59,7 +59,7 @@ jobs:
             # Submissions from issues are opened by the bot, which checked
             # the issue's author already (scripts/issue_to_setup.py)
             if [ -n "$changed" ] && [ "$PR_AUTHOR" != "github-actions[bot]" ]; then
-              args=(--pr-author "$PR_AUTHOR" --changed "$changed")
+              args=(--pr-author "$PR_AUTHOR" --changed "$changed" --base-rev HEAD^1)
             fi
           fi
           scripts/check.sh "${args[@]}"
