@@ -133,11 +133,14 @@ def download(url, what):
 
 def json_field(text, what, required):
     """Pasted JSON (fenced or not) or an attached .json file"""
+    fenced = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.S)
+    # A `render: json` field left empty comes as an empty fence, not _No response_
+    if fenced and not fenced.group(1).strip() and not text.replace(fenced.group(0), "").strip():
+        text = ""
     if not text:
         if required:
             raise Refused(f"{what} is missing")
         return None
-    fenced = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.S)
     candidate = fenced.group(1) if fenced else text
     if candidate.lstrip().startswith("{"):
         source = candidate

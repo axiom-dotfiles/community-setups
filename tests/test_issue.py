@@ -74,6 +74,10 @@ def main():
             run("headings in about", body(**{"About it": "Intro\n\n### Tips\n\nUse the overlay"}), check=lambda f: (
                 json.loads((f / "setup.json").read_text())["about"] == "Intro\n\n### Tips\n\nUse the overlay"
                 and json.loads((f / "setup.json").read_text())["tags"] == ["dark", "glass"])),
+            run("empty theme field", body(**{"theme.json": "```json\n\n```"}), check=lambda f: (
+                not (f / "theme.json").exists()
+                and json.loads((f / "config.json").read_text())["Appearance"]["theme"] == "dracula")),
+            run("empty config field", body(**{"config.json": "```json\n\n```"}), expect_error="config.json is missing"),
             run("checklist isn't a field", body(), check=lambda f: "Checklist" not in (f / "setup.json").read_text()),
             run("attached config", body(**{"config.json": "[config.json](https://github.com/user-attachments/files/123/config.json)"}), expect_error="isn't valid JSON"),
             run("no screenshot", body(Screenshot="_No response_"), expect_error="Screenshot is missing"),
