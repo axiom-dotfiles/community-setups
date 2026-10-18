@@ -1,20 +1,24 @@
 name: Validate
 
-# Every setup against axiom's main branch as it is today: the schema, the
-# themes and the migration code all come from a fresh clone of axiom on
-# every run, so the checks never fall behind it. The nightly run catches a
-# setup that a change in axiom broke, and opens (or updates) an issue.
+# A setup is checked when it's posted or changed, against axiom's main as
+# it is that day (schema, themes and migration code from a fresh clone),
+# and never again: axiom migrates an older setup's config when someone
+# applies it, as it does any import. So each run checks only the setups
+# the change touches (HEAD^1 is the base: a pull request's merge commit,
+# a squash merge on main, or a submission's one commit on its branch).
 on:
   pull_request:
   push:
     branches: [main]
-  schedule:
-    - cron: "17 5 * * *"
   workflow_dispatch:
+    inputs:
+      all:
+        description: Check every setup, not only the last commit's
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   validate:
@@ -50,33 +54,22 @@ jobs:
       - name: Check setups
         env:
           EVENT: ${{ github.event_name }}
+          ALL: ${{ inputs.all }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          args=()
-          if [ "$EVENT" = pull_request ]; then
-            # A pull request's HEAD is its merge commit: HEAD^1 is the base
-            changed=$(git diff --name-only HEAD^1 HEAD | sed -n 's#^setups/\([^/]*\)/.*#\1#p' | sort -u | paste -sd, -)
-            # Submissions from issues are opened by the bot, which checked
-            # the issue's author already (scripts/issue_to_setup.py)
-            if [ -n "$changed" ] && [ "$PR_AUTHOR" != "github-actions[bot]" ]; then
-              args=(--pr-author "$PR_AUTHOR" --changed "$changed")
-            fi
+          if [ "$ALL" = true ]; then
+            scripts/check.sh
+            exit 0
+          fi
+          changed=$(git diff --name-only HEAD^1 HEAD | sed -n 's#^setups/\([^/]*\)/.*#\1#p' | sort -u | paste -sd, -)
+          if [ -z "$changed" ]; then
+            echo "No setup changed." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          args=(--changed "$changed")
+          # Submissions from issues are opened by the bot, which checked
+          # the issue's author already (scripts/issue_to_setup.py)
+          if [ "$EVENT" = pull_request ] && [ "$PR_AUTHOR" != "github-actions[bot]" ]; then
+            args+=(--pr-author "$PR_AUTHOR" --base-rev HEAD^1)
           fi
           scripts/check.sh "${args[@]}"
-
-      - name: Report a nightly failure
-        if: failure() && github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          title="Setups fail against axiom main"
-          existing=$(gh issue list -R "$GITHUB_REPOSITORY" --label needs-update --state open --search "in:title \"$title\"" --json number -q '.[0].number')
-          body="The nightly check failed against axiom main ($(git -C .axiom rev-parse --short HEAD)): $RUN_URL"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" -R "$GITHUB_REPOSITORY" --body "$body"
-          else
-            gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --label needs-update --body "$body
-
-          A change in axiom made these setups invalid. Update them (the authors are mentioned in the run's summary), or ask their authors to."
-          fi

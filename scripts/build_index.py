@@ -13,6 +13,7 @@ Run it after scripts/check.sh passes: it doesn't check.
 """
 
 import argparse
+import html
 import json
 import shutil
 import subprocess
@@ -20,7 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from setups import IMAGE_EXTS, ROOT, all_setups, sha256
+from setups import ROOT, all_setups, images, sha256, symlinks
 
 REPO = "axiom-dotfiles/community-setups"
 CATALOG_URL = f"https://raw.githubusercontent.com/{REPO}/catalog/"
@@ -47,7 +48,7 @@ def entry(out, rel):
 
 
 def image(folder, stem):
-    found = [p for p in folder.iterdir() if p.is_file() and p.stem == stem and p.suffix.lower() in IMAGE_EXTS]
+    found = images(folder, stem)
     return found[0] if found else None
 
 
@@ -65,6 +66,9 @@ def build(out):
     setups = []
     for folder in all_setups():
         setup_id = folder.name
+        # check.sh refuses them; this runs with write access, so never follow one
+        if symlinks(folder):
+            sys.exit(f"{folder} holds a symlink: run scripts/check.sh")
         manifest = json.loads((folder / "setup.json").read_text())
         config = json.loads((folder / "config.json").read_text())
         dest = out / "setups" / setup_id
@@ -122,6 +126,12 @@ def build(out):
     return index
 
 
+def cell_text(text):
+    """A submitter's text as it may go in a table cell's HTML: escaped, on
+    one line, with no `|` to end the cell"""
+    return html.escape(" ".join(text.split())).replace("|", "&#124;")
+
+
 def gallery(index):
     """The README table: newest first, linking each thumbnail to its folder"""
     setups = index["setups"]
@@ -133,12 +143,12 @@ def gallery(index):
         cells = []
         for s in chunk:
             thumb = CATALOG_URL + s["files"]["thumb"]["path"]
-            alt = s["title"].replace('"', "'")
+            title, description = cell_text(s["title"]), cell_text(s["description"])
             page = f"https://github.com/{REPO}/tree/main/setups/{s['id']}"
             cells.append(
-                f'<a href="{page}"><img src="{thumb}" alt="{alt}"></a><br>'
-                f'<b>{s["title"]}</b> · <a href="https://github.com/{s["author"]}">@{s["author"]}</a><br>'
-                f'<sub>{s["description"]}</sub>'
+                f'<a href="{page}"><img src="{thumb}" alt="{title}"></a><br>'
+                f'<b>{title}</b> · <a href="https://github.com/{s["author"]}">@{s["author"]}</a><br>'
+                f'<sub>{description}</sub>'
             )
         cells += [""] * (GALLERY_COLUMNS - len(cells))
         rows.append("| " + " | ".join(cells) + " |")

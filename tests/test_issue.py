@@ -39,6 +39,7 @@ def body(**over):
         "Wallpaper source": "_No response_",
     }
     values.update(over)
+    values["Checklist"] = "- [X] I exported it with **Share → Export**, keybinds, apps and commands off."
     return "\n\n".join(f"### {k}\n\n{v}" for k, v in values.items())
 
 
@@ -70,6 +71,10 @@ def main():
                 and (f / "screenshot.png").is_file() and f.name == "glass-harbor")),
             run("bundled theme renames it", body(**{"Setup id": "harbor", "theme.json": '{"name": "Harbor", "colors": {}}'}), check=lambda f: (
                 json.loads((f / "config.json").read_text())["Appearance"]["theme"] == "community/harbor")),
+            run("headings in about", body(**{"About it": "Intro\n\n### Tips\n\nUse the overlay"}), check=lambda f: (
+                json.loads((f / "setup.json").read_text())["about"] == "Intro\n\n### Tips\n\nUse the overlay"
+                and json.loads((f / "setup.json").read_text())["tags"] == ["dark", "glass"])),
+            run("checklist isn't a field", body(), check=lambda f: "Checklist" not in (f / "setup.json").read_text()),
             run("attached config", body(**{"config.json": "[config.json](https://github.com/user-attachments/files/123/config.json)"}), expect_error="isn't valid JSON"),
             run("no screenshot", body(Screenshot="_No response_"), expect_error="Screenshot is missing"),
             run("foreign link", body(Screenshot="![x](https://evil.example/x.png)"), expect_error="links elsewhere"),
@@ -79,6 +84,14 @@ def main():
         (tmp / "taken").mkdir()
         (tmp / "taken" / "setup.json").write_text('{"author": "other"}')
         results.append(run("someone else's id", body(**{"Setup id": "taken"}), expect_error="@other's setup"))
+        (tmp / "mine").mkdir()
+        (tmp / "mine" / "setup.json").write_text('{"author": "someone"}')
+        (tmp / "mine" / "wallpaper.png").write_bytes(image)
+        results.append(run("an update replaces the folder", body(**{"Setup id": "mine"}), check=lambda f: not (f / "wallpaper.png").exists() and (f / "screenshot.png").is_file()))
+        redirects = [its.redirect_allowed(u) for u in ("https://objects.githubusercontent.com/x", "https://github-production-user-asset-6210df.s3.amazonaws.com/x", "http://objects.githubusercontent.com/x")]
+        ok = redirects == [True, False, False]
+        print(f"{'ok  ' if ok else 'FAIL'} redirects only to GitHub's storage, over https")
+        results.append(ok)
     finally:
         shutil.rmtree(tmp)
     print(f"\n{sum(results)}/{len(results)} cases ok")

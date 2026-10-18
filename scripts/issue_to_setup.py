@@ -14,14 +14,14 @@ everything else).
 import json
 import os
 import re
+import shutil
 import sys
 import urllib.request
-from pathlib import Path
 from urllib.parse import urlparse
 
 from setups import ID_RE, SETUPS, WALLPAPER_MAX, write_json
 
-# Issue form labels (.github/ISSUE_TEMPLATE/submit-setup.yml)
+# Issue form labels (.github/ISSUE_TEMPLATE/01-submit-setup.yml)
 FIELDS = {
     "title": "Title",
     "id": "Setup id",
@@ -37,6 +37,8 @@ FIELDS = {
     "license": "Wallpaper license",
     "source": "Wallpaper source",
 }
+# The form's section after its last field
+FORM_END = "Checklist"
 NO_RESPONSE = "_No response_"
 ATTACHMENT_HOSTS = ("github.com", "user-images.githubusercontent.com", "private-user-images.githubusercontent.com", "objects.githubusercontent.com")
 DOWNLOAD_MAX = WALLPAPER_MAX + 1
@@ -47,12 +49,22 @@ class Refused(Exception):
 
 
 def sections(body):
-    """{label: text} from the form's `### Label` sections"""
+    """{label: text} from the form's `### Label` sections. The form renders
+    its fields in order, so each label is looked for after the one before:
+    a `### heading` in the submitter's Markdown (About it) stays part of
+    its field unless it is exactly the next field's label."""
+    text = body.replace("\r\n", "\n")
+    heads = []
+    pos = 0
+    for label in [*FIELDS.values(), FORM_END]:
+        match = re.compile(rf"^### {re.escape(label)}[ \t]*$", re.M).search(text, pos)
+        if match:
+            heads.append((label, match))
+            pos = match.end()
     found = {}
-    parts = re.split(r"^### (.+?)\s*$", body.replace("\r\n", "\n"), flags=re.M)
-    for i in range(1, len(parts) - 1, 2):
-        text = parts[i + 1].strip()
-        found[parts[i].strip()] = "" if text == NO_RESPONSE else text
+    for (label, match), following in zip(heads, heads[1:] + [(None, None)]):
+        value = text[match.end():following[1].start() if following[1] else len(text)].strip()
+        found[label] = "" if value == NO_RESPONSE else value
     return found
 
 
@@ -83,15 +95,37 @@ def allowed(url):
     return parsed.hostname != "github.com" or parsed.path.startswith("/user-attachments/")
 
 
+def redirect_allowed(url):
+    """GitHub serves an attachment through a redirect to its storage"""
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    return parsed.scheme == "https" and (host in ATTACHMENT_HOSTS or host.endswith(".githubusercontent.com"))
+
+
+class _Redirects(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only to GitHub's storage, checked before the
+    request is made rather than after"""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not redirect_allowed(newurl):
+            raise Refused("the attachment redirected somewhere unexpected")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_opener = urllib.request.build_opener(_Redirects)
+
+
 def download(url, what):
     if not allowed(url):
         raise Refused(f"{what}: attach the file to the issue (drag it into the field); links elsewhere aren't fetched")
     request = urllib.request.Request(url, headers={"User-Agent": "axiom-community-setups"})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        final = urlparse(response.geturl()).hostname
-        if final not in ATTACHMENT_HOSTS and not final.endswith(".githubusercontent.com"):
-            raise Refused(f"{what}: the attachment redirected somewhere unexpected")
-        data = response.read(DOWNLOAD_MAX + 1)
+    try:
+        with _opener.open(request, timeout=30) as response:
+            data = response.read(DOWNLOAD_MAX + 1)
+    except Refused as e:
+        raise Refused(f"{what}: {e}")
+    except (OSError, ValueError) as e:  # URLError, HTTPError and timeouts are OSErrors
+        raise Refused(f"{what}: the attachment couldn't be downloaded ({e}); attach it again")
     if len(data) > DOWNLOAD_MAX:
         raise Refused(f"{what}: too large")
     return data
@@ -182,12 +216,15 @@ def build(body, author):
 
     folder = SETUPS / setup_id
     if folder.exists():
-        existing = json.loads((folder / "setup.json").read_text()).get("author", "")
-        if existing.lower() != author.lower():
-            raise Refused(f"{setup_id!r} is @{existing}'s setup: pick another id")
-        for p in sorted(folder.rglob("*"), reverse=True):
-            p.unlink() if p.is_file() else p.rmdir()
-    folder.mkdir(parents=True, exist_ok=True)
+        try:
+            existing = json.loads((folder / "setup.json").read_text()).get("author", "")
+        except (OSError, ValueError, AttributeError):
+            existing = ""
+        if not isinstance(existing, str) or existing.lower() != author.lower():
+            raise Refused(f"{setup_id!r} is @{existing or 'someone else'}'s setup: pick another id")
+        # An update replaces the whole setup
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
     write_json(folder / "setup.json", manifest)
     write_json(folder / "config.json", config)
     if theme is not None:
