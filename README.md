@@ -16,7 +16,7 @@ A setup is the look and layout of an axiom desktop: its bars and their style, ov
 
 ## Apply one
 
-- **In axiom** (coming soon): Settings → Maintenance → **Community setups** lets you search, preview and apply one.
+- **In axiom**: Settings → Maintenance → **Community setups** lets you search, preview and apply one, or type `/config community <search>` in the launcher. Every file is checked against the catalog's sha256 before it's used.
 - **By hand**: download a setup's `config.json`, then go to Settings → Maintenance → Share → **Import…**. If it has a `theme.json`, copy that first to `~/.local/share/axiom/themes/<id>.json`.
 
 Applying a setup first saves your current one as `before-<id>`, so going back is one click under **Saved configs**.
