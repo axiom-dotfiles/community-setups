@@ -1,8 +1,8 @@
 name: Publish
 
 # After a merge: rebuild the catalog axiom reads (index.json + each setup's
-# files and thumbnail, force-pushed as the `catalog` branch, one commit) and
-# the README's gallery.
+# files and thumbnail, force-pushed as the `catalog` branch, one commit),
+# whose README is the gallery. Nothing is committed to main (protected).
 on:
   push:
     branches: [main]
@@ -38,7 +38,7 @@ jobs:
           git checkout -q -B main FETCH_HEAD
 
       - name: Build the catalog
-        run: python3 scripts/build_index.py "$RUNNER_TEMP/catalog" --readme README.md
+        run: python3 scripts/build_index.py "$RUNNER_TEMP/catalog"
 
       - name: Push the catalog branch
         env:
@@ -52,14 +52,3 @@ jobs:
           git commit -q -m "Catalog for $GITHUB_SHA"
           auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
           git -c http.extraheader="AUTHORIZATION: basic $auth" push -q --force "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" catalog:catalog
-
-      - name: Commit the README gallery
-        env:
-          TOKEN: ${{ github.token }}
-        run: |
-          git diff --quiet README.md && exit 0
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -q -m "Update the gallery" README.md
-          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
-          git -c http.extraheader="AUTHORIZATION: basic $auth" push -q origin main

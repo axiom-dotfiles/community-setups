@@ -16,6 +16,9 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  # To run Validate on the branch: a pull request a workflow opens doesn't
+  # run it, and main requires its check
+  actions: write
 
 concurrency:
   group: submission-${{ github.event.issue.number }}
@@ -85,12 +88,13 @@ jobs:
           git commit -q -F "$RUNNER_TEMP/msg.txt" --author "$AUTHOR <$AUTHOR_ID+$AUTHOR@users.noreply.github.com>"
           auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
           git -c http.extraheader="AUTHORIZATION: basic $auth" push -q --force origin "$branch"
+          gh workflow run validate.yml -R "$GITHUB_REPOSITORY" --ref "$branch"
           url=$(gh pr list -R "$GITHUB_REPOSITORY" --head "$branch" --state open --json url -q '.[0].url')
           if [ -z "$url" ]; then
             {
               echo "Submitted by @$AUTHOR in #$NUMBER. Closes #$NUMBER."
               echo
-              echo "Checked by the Submission workflow when the issue was opened or edited (pull requests opened by a workflow don't run Validate themselves: close and reopen this one to run it)."
+              echo "Checked when the issue was opened or edited; Validate runs on each update of the branch."
               echo
               cat "$RUNNER_TEMP/report.md"
             } > "$RUNNER_TEMP/pr.md"
