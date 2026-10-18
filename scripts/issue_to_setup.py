@@ -41,6 +41,8 @@ FIELDS = {
 FORM_END = "Checklist"
 NO_RESPONSE = "_No response_"
 ATTACHMENT_HOSTS = ("github.com", "user-images.githubusercontent.com", "private-user-images.githubusercontent.com", "objects.githubusercontent.com")
+# Where github.com/user-attachments/ redirects: GitHub's own S3 bucket
+ATTACHMENT_STORAGE = ("github-production-user-asset-6210df.s3.amazonaws.com",)
 DOWNLOAD_MAX = WALLPAPER_MAX + 1
 
 
@@ -99,7 +101,7 @@ def redirect_allowed(url):
     """GitHub serves an attachment through a redirect to its storage"""
     parsed = urlparse(url)
     host = parsed.hostname or ""
-    return parsed.scheme == "https" and (host in ATTACHMENT_HOSTS or host.endswith(".githubusercontent.com"))
+    return parsed.scheme == "https" and (host in ATTACHMENT_HOSTS or host in ATTACHMENT_STORAGE or host.endswith(".githubusercontent.com"))
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):

@@ -92,8 +92,8 @@ def main():
         (tmp / "mine" / "setup.json").write_text('{"author": "someone"}')
         (tmp / "mine" / "wallpaper.png").write_bytes(image)
         results.append(run("an update replaces the folder", body(**{"Setup id": "mine"}), check=lambda f: not (f / "wallpaper.png").exists() and (f / "screenshot.png").is_file()))
-        redirects = [its.redirect_allowed(u) for u in ("https://objects.githubusercontent.com/x", "https://github-production-user-asset-6210df.s3.amazonaws.com/x", "http://objects.githubusercontent.com/x")]
-        ok = redirects == [True, False, False]
+        redirects = [its.redirect_allowed(u) for u in ("https://objects.githubusercontent.com/x", "https://github-production-user-asset-6210df.s3.amazonaws.com/x", "https://evil.s3.amazonaws.com/x", "http://objects.githubusercontent.com/x", "http://github-production-user-asset-6210df.s3.amazonaws.com/x")]
+        ok = redirects == [True, True, False, False, False]
         print(f"{'ok  ' if ok else 'FAIL'} redirects only to GitHub's storage, over https")
         results.append(ok)
     finally:
