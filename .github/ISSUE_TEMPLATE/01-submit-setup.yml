@@ -73,7 +73,7 @@ body:
     id: screenshot
     attributes:
       label: Screenshot
-      description: Drag in one screenshot of the whole screen with this setup, unedited (PNG, JPEG or WebP, 1280–7680 px wide, at most 3 MB). Nothing private on screen.
+      description: Drag in one screenshot of the whole screen with this setup, unedited (PNG, JPEG or WebP, 1280–7680 px wide; one over 3 MB is converted to WebP). Nothing private on screen.
     validations:
       required: true
   - type: textarea

@@ -19,7 +19,7 @@ import sys
 import urllib.request
 from urllib.parse import urlparse
 
-from setups import ID_RE, SETUPS, WALLPAPER_MAX, write_json
+from setups import ID_RE, SCREENSHOT_MAX, SETUPS, WALLPAPER_MAX, write_json
 
 # Issue form labels (.github/ISSUE_TEMPLATE/01-submit-setup.yml)
 FIELDS = {
@@ -160,7 +160,7 @@ def json_field(text, what, required):
     return value
 
 
-def image_field(text, what, required):
+def image_field(text, what, required, max_bytes):
     if not text:
         if required:
             raise Refused(f"{what} is missing")
@@ -181,7 +181,29 @@ def image_field(text, what, required):
     ext = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp"}.get(fmt)
     if not ext:
         raise Refused(f"{what} is {fmt}: use PNG, JPEG or WebP")
+    if len(data) > max_bytes:
+        # GitHub re-encodes an attached PNG as 32-bit, often larger than the
+        # submitter's file: shrink it here, losslessly if that's enough
+        data, ext = shrunk(data, max_bytes), ".webp"
     return data, ext
+
+
+def shrunk(data, max_bytes):
+    from io import BytesIO
+
+    from PIL import Image
+
+    with Image.open(BytesIO(data)) as im:
+        im = im.convert("RGBA" if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info else "RGB")
+    if im.mode == "RGBA" and im.getchannel("A").getextrema() == (255, 255):
+        im = im.convert("RGB")
+    for options in ({"lossless": True}, {"quality": 90}):
+        out = BytesIO()
+        im.save(out, "WEBP", method=6, **options)
+        if out.tell() <= max_bytes:
+            return out.getvalue()
+    # Still too large: kept, and the checks report its size
+    return out.getvalue()
 
 
 def slug(text):
@@ -208,8 +230,8 @@ def build(body, author):
 
     config = json_field(field(found, "config"), "config.json", True)
     theme = json_field(field(found, "theme"), "theme.json", False)
-    shot = image_field(field(found, "screenshot"), "Screenshot", True)
-    wall = image_field(field(found, "wallpaper"), "Wallpaper", False)
+    shot = image_field(field(found, "screenshot"), "Screenshot", True, SCREENSHOT_MAX)
+    wall = image_field(field(found, "wallpaper"), "Wallpaper", False, WALLPAPER_MAX)
     if wall:
         manifest["wallpaper"] = {"license": field(found, "license"), "source": field(found, "source")}
 

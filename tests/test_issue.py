@@ -14,6 +14,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import issue_to_setup as its  # noqa: E402
+from setups import SCREENSHOT_MAX  # noqa: E402
 
 
 def png(size=(1920, 1080)):
@@ -85,6 +86,12 @@ def main():
             run("bad id", body(**{"Setup id": "Not OK"}), expect_error="setup id"),
             run("bad json", body(**{"config.json": "{nope"}), expect_error="isn't valid JSON"),
         ]
+        its.SCREENSHOT_MAX = len(image) - 1
+        results.append(run("an oversized screenshot becomes lossless WebP", body(**{"Setup id": "large"}), check=lambda f: (
+            not (f / "screenshot.png").exists()
+            and (f / "screenshot.webp").stat().st_size <= its.SCREENSHOT_MAX
+            and Image.open(f / "screenshot.webp").convert("RGB").tobytes() == Image.open(io.BytesIO(image)).convert("RGB").tobytes())))
+        its.SCREENSHOT_MAX = SCREENSHOT_MAX
         (tmp / "taken").mkdir()
         (tmp / "taken" / "setup.json").write_text('{"author": "other"}')
         results.append(run("someone else's id", body(**{"Setup id": "taken"}), expect_error="@other's setup"))
