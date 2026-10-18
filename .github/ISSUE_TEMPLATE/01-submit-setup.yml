@@ -80,7 +80,7 @@ body:
     id: theme
     attributes:
       label: theme.json
-      description: Optional. Only if your theme isn't one axiom ships (one you made, or one generated from your wallpaper, from ~/.local/state/axiom/themes/). Paste it or drag it in. It's renamed after your setup.
+      description: Optional: leave it empty if you use a theme axiom ships. Only for a theme you made, or one generated from your wallpaper (in ~/.local/state/axiom/themes/). Paste it or drag it in. It's renamed after your setup.
       render: json
   - type: textarea
     id: wallpaper

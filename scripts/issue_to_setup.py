@@ -41,6 +41,8 @@ FIELDS = {
 FORM_END = "Checklist"
 NO_RESPONSE = "_No response_"
 ATTACHMENT_HOSTS = ("github.com", "user-images.githubusercontent.com", "private-user-images.githubusercontent.com", "objects.githubusercontent.com")
+# Where github.com/user-attachments/ redirects: GitHub's own S3 bucket
+ATTACHMENT_STORAGE = ("github-production-user-asset-6210df.s3.amazonaws.com",)
 DOWNLOAD_MAX = WALLPAPER_MAX + 1
 
 
@@ -99,7 +101,7 @@ def redirect_allowed(url):
     """GitHub serves an attachment through a redirect to its storage"""
     parsed = urlparse(url)
     host = parsed.hostname or ""
-    return parsed.scheme == "https" and (host in ATTACHMENT_HOSTS or host.endswith(".githubusercontent.com"))
+    return parsed.scheme == "https" and (host in ATTACHMENT_HOSTS or host in ATTACHMENT_STORAGE or host.endswith(".githubusercontent.com"))
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
@@ -133,11 +135,14 @@ def download(url, what):
 
 def json_field(text, what, required):
     """Pasted JSON (fenced or not) or an attached .json file"""
+    fenced = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.S)
+    # A `render: json` field left empty comes as an empty fence, not _No response_
+    if fenced and not fenced.group(1).strip() and not text.replace(fenced.group(0), "").strip():
+        text = ""
     if not text:
         if required:
             raise Refused(f"{what} is missing")
         return None
-    fenced = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.S)
     candidate = fenced.group(1) if fenced else text
     if candidate.lstrip().startswith("{"):
         source = candidate
