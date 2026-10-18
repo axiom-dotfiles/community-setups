@@ -1,0 +1,112 @@
+name: Submit a setup
+description: Share your axiom setup without using git. Fill this in and a pull request is made for you.
+title: "Setup: "
+labels: [submission]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing! When you submit (or edit) this issue, a workflow checks your setup and opens a pull request for you. Its result is commented below. **Edit the issue** to fix anything it finds.
+
+        In axiom: **Settings → Maintenance → Share → Export**, with keybinds, apps and commands **off**. That writes `~/axiom-….json`, holding only your look and layout. See the [guide](https://github.com/axiom-dotfiles/community-setups/blob/main/CONTRIBUTING.md) for the details.
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: Its name in the gallery, at most 40 characters.
+      placeholder: Glass Harbor
+    validations:
+      required: true
+  - type: input
+    id: id
+    attributes:
+      label: Setup id
+      description: Optional. Lowercase letters, digits and dashes. Left empty, it's made from the title. To update a setup of yours, give its id.
+      placeholder: glass-harbor
+  - type: input
+    id: description
+    attributes:
+      label: Description
+      description: One line, at most 140 characters. What it looks like, or what it's for.
+    validations:
+      required: true
+  - type: textarea
+    id: about
+    attributes:
+      label: About it
+      description: Optional. The idea behind it, its inspiration, tips for using it. Markdown.
+  - type: dropdown
+    id: tags
+    attributes:
+      label: Tags
+      description: Up to 6.
+      multiple: true
+      options: [dark, light, minimal, dense, colorful, monochrome, floating, docked, vertical, sidebar, multi-bar, pills, powerline, outline, transparent, glass, rounded, sharp, retro, laptop, ultrawide, multi-monitor, keyboard-driven, dock]
+    validations:
+      required: true
+  - type: dropdown
+    id: tested
+    attributes:
+      label: Tested on
+      description: The compositors you ran it on.
+      multiple: true
+      options: [Hyprland, niri, sway]
+    validations:
+      required: true
+  - type: input
+    id: fonts
+    attributes:
+      label: Fonts
+      description: The font families it uses, comma-separated (Settings → Look & Feel → Font). Users without one see a fallback.
+      placeholder: Inter, JetBrainsMono Nerd Font
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: config.json
+      description: Paste the exported file's contents, or drag the file in.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag in one screenshot of the whole screen with this setup, unedited (PNG, JPEG or WebP, 1280–7680 px wide, at most 3 MB). Nothing private on screen.
+    validations:
+      required: true
+  - type: textarea
+    id: theme
+    attributes:
+      label: theme.json
+      description: Optional. Only if your theme isn't one axiom ships (one you made, or one generated from your wallpaper, from ~/.local/state/axiom/themes/). Paste it or drag it in. It's renamed after your setup.
+      render: json
+  - type: textarea
+    id: wallpaper
+    attributes:
+      label: Wallpaper
+      description: Optional. Drag in the wallpaper (at most 10 MB). Users choose whether to use it. Only one you made or one whose license allows sharing.
+  - type: input
+    id: license
+    attributes:
+      label: Wallpaper license
+      description: With a wallpaper. An SPDX id (CC0-1.0, CC-BY-4.0, …), or `own` for your own work.
+  - type: input
+    id: source
+    attributes:
+      label: Wallpaper source
+      description: With a wallpaper. Where it comes from (an https link), or `own`.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I exported it with **Share → Export**, keybinds, apps and commands off.
+          required: true
+        - label: The screenshot shows this exact setup, unedited, with nothing private on screen (notifications, names, emails).
+          required: true
+        - label: I ran it on the compositors I ticked, and it looks right with a fallback font.
+          required: true
+        - label: Anything I attached is mine to share, or its license allows it.
+          required: true

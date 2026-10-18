@@ -1,0 +1,3 @@
+# Maintainers review every change; they may also update anyone's setup
+# (scripts/validate.py reads the handles here for its author check)
+* @travishepworth

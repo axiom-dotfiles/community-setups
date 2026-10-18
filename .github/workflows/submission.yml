@@ -1,0 +1,130 @@
+name: Submission
+
+# A "Submit a setup" issue becomes a pull request: the form's fields and
+# attachments are turned into setups/<id>/ (scripts/issue_to_setup.py),
+# checked like any pull request, and the result is commented on the issue.
+# Editing the issue runs it again and updates the same pull request.
+#
+# The issue is untrusted input: it reaches the scripts only through env,
+# never through ${{ }} in a script, and the token is given only to the
+# steps that push and comment.
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: submission-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    if: contains(github.event.issue.labels.*.name, 'submission') && github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git python python-pillow python-jsonschema qt6-declarative github-cli
+
+      - name: Checkout
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          git init -q .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" fetch -q --depth=1 origin main
+          git checkout -q -B main FETCH_HEAD
+          git clone -q --depth=1 https://github.com/axiom-dotfiles/axiom .axiom
+
+      - name: Build the setup from the issue
+        id: build
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          set +e
+          id=$(python3 scripts/issue_to_setup.py 2> "$RUNNER_TEMP/refused.txt")
+          status=$?
+          set -e
+          if [ $status -ne 0 ]; then
+            { echo "### ❌ Couldn't read the submission"; echo; cat "$RUNNER_TEMP/refused.txt"; } > "$RUNNER_TEMP/report.md"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          set +e
+          GITHUB_STEP_SUMMARY="$RUNNER_TEMP/report.md" scripts/check.sh "$id"
+          status=$?
+          set -e
+          echo "ok=$([ $status -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the pull request
+        if: steps.build.outputs.ok == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
+          SETUP_ID: ${{ steps.build.outputs.id }}
+          NUMBER: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          AUTHOR_ID: ${{ github.event.issue.user.id }}
+        run: |
+          branch="submission/issue-$NUMBER"
+          title=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["title"])' "setups/$SETUP_ID/setup.json")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b "$branch"
+          git add "setups/$SETUP_ID"
+          printf 'Add setup: %s\n\nSubmitted in #%s.\n' "$title" "$NUMBER" > "$RUNNER_TEMP/msg.txt"
+          git commit -q -F "$RUNNER_TEMP/msg.txt" --author "$AUTHOR <$AUTHOR_ID+$AUTHOR@users.noreply.github.com>"
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push -q --force origin "$branch"
+          url=$(gh pr list -R "$GITHUB_REPOSITORY" --head "$branch" --state open --json url -q '.[0].url')
+          if [ -z "$url" ]; then
+            {
+              echo "Submitted by @$AUTHOR in #$NUMBER. Closes #$NUMBER."
+              echo
+              echo "Checked by the Submission workflow when the issue was opened or edited (pull requests opened by a workflow don't run Validate themselves: close and reopen this one to run it)."
+              echo
+              cat "$RUNNER_TEMP/report.md"
+            } > "$RUNNER_TEMP/pr.md"
+            # Fails while the org doesn't let Actions open pull requests:
+            # the branch is pushed, and a maintainer opens it
+            url=$(gh pr create -R "$GITHUB_REPOSITORY" --base main --head "$branch" --title "Add setup: $title" --body-file "$RUNNER_TEMP/pr.md" --label submission) || url=""
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on the issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+          OK: ${{ steps.build.outputs.ok }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            if [ "$OK" = true ] && [ -n "$PR_URL" ]; then
+              echo "Thanks! Your setup passed the checks and is now $PR_URL. A maintainer will review it; edit this issue to change anything and the pull request follows."
+            elif [ "$OK" = true ] && [ -n "$BRANCH" ]; then
+              echo "Thanks! Your setup passed the checks and is on the \`$BRANCH\` branch; a maintainer will open its pull request and review it. Edit this issue to change anything."
+            else
+              echo "Your setup didn't pass the checks yet. **Edit this issue** to fix what's listed below and they run again."
+            fi
+            echo
+            [ -f "$RUNNER_TEMP/report.md" ] && cat "$RUNNER_TEMP/report.md" || echo "Something went wrong before the checks ran: $RUN_URL"
+          } > "$RUNNER_TEMP/comment.md"
+          gh issue comment "$NUMBER" -R "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+          if [ "$OK" = true ]; then
+            gh issue edit "$NUMBER" -R "$GITHUB_REPOSITORY" --remove-label needs-changes || true
+          else
+            gh issue edit "$NUMBER" -R "$GITHUB_REPOSITORY" --add-label needs-changes || true
+          fi

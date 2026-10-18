@@ -1,0 +1,65 @@
+name: Publish
+
+# After a merge: rebuild the catalog axiom reads (index.json + each setup's
+# files and thumbnail, force-pushed as the `catalog` branch, one commit) and
+# the README's gallery.
+on:
+  push:
+    branches: [main]
+    paths: ["setups/**", "scripts/build_index.py", "scripts/setups.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git python python-pillow
+
+      # Whole history without the blobs: the index dates each setup by its
+      # last commit
+      - name: Checkout
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          git init -q .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" fetch -q --filter=blob:none origin main
+          git checkout -q -B main FETCH_HEAD
+
+      - name: Build the catalog
+        run: python3 scripts/build_index.py "$RUNNER_TEMP/catalog" --readme README.md
+
+      - name: Push the catalog branch
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP/catalog"
+          git init -q -b catalog .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Catalog for $GITHUB_SHA"
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push -q --force "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" catalog:catalog
+
+      - name: Commit the README gallery
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git diff --quiet README.md && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Update the gallery" README.md
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push -q origin main

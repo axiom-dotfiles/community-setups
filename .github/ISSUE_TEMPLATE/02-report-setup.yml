@@ -1,0 +1,41 @@
+name: Report a setup
+description: A setup is broken, doesn't look like its screenshot, or shows something it shouldn't.
+title: "Report: "
+labels: [report]
+body:
+  - type: input
+    id: setup
+    attributes:
+      label: Setup id
+      description: Its folder name in setups/.
+    validations:
+      required: true
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What's wrong
+      options:
+        - It fails to apply
+        - It doesn't look like its screenshot
+        - Something private or inappropriate is visible
+        - A license or credit problem
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: axiom
+    attributes:
+      label: axiom version
+      description: Settings → Maintenance, or `git -C ~/.config/quickshell/axiom describe`.
+  - type: dropdown
+    id: compositor
+    attributes:
+      label: Compositor
+      options: [Hyprland, niri, sway]
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What you saw, with a screenshot if it helps.
+    validations:
+      required: true
