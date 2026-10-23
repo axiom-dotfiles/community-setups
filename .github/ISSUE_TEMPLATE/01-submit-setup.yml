@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for sharing! When you submit (or edit) this issue, a workflow checks your setup and opens a pull request for you. Its result is commented below. **Edit the issue** to fix anything it finds.
 
-        In axiom: **Settings → Maintenance → Share → Export**, with keybinds, apps and commands **off**. That writes `~/axiom-….json`, holding only your look and layout. See the [guide](https://github.com/axiom-dotfiles/community-setups/blob/main/CONTRIBUTING.md) for the details.
+        In axiom: **Settings → Maintenance → Community setups → Export and submit…** (or **Share → Export** with both *Include* switches **off**). That writes `~/axiom-….json`, holding only your look and layout. See the [guide](https://github.com/axiom-shell/community-setups/blob/main/CONTRIBUTING.md) for the details.
   - type: input
     id: title
     attributes:

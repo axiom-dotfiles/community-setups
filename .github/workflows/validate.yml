@@ -43,7 +43,7 @@ jobs:
 
       - name: Clone axiom (main)
         run: |
-          git clone -q --depth=1 https://github.com/axiom-dotfiles/axiom .axiom
+          git clone -q --depth=1 https://github.com/axiom-shell/axiom .axiom
           echo "axiom main at $(git -C .axiom rev-parse --short HEAD)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Validator tests

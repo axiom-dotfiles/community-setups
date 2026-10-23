@@ -23,7 +23,7 @@ from pathlib import Path
 
 from setups import ROOT, all_setups, images, sha256, symlinks
 
-REPO = "axiom-dotfiles/community-setups"
+REPO = "axiom-shell/community-setups"
 CATALOG_URL = f"https://raw.githubusercontent.com/{REPO}/catalog/"
 FORMAT = 1
 THUMB_WIDTH = 640

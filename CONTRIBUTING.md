@@ -11,9 +11,11 @@ Use axiom's editors and Settings page. Before exporting:
 
 ## 2. Export it
 
-Go to **Settings → Maintenance → Share → Export**, with **keybinds, apps and commands off**. That writes `~/axiom-<name>-<date>-<time>.json`, holding only the look and layout that differs from axiom's defaults. Rename it to `config.json`.
+Go to **Settings → Maintenance → Community setups → Export and submit…**, or **Share → Export** with **Include preferences, keybinds and apps** and **Include commands** both **off**. That writes `~/axiom-<name>-<date>-<time>.json`, holding only the look and layout that differs from axiom's defaults. Rename it to `config.json`.
 
-Don't edit it by hand, and don't copy your whole `~/.config/axiom/config.json`. The export already leaves out your monitors, wallpapers, accounts and paths.
+Don't edit it by hand, and don't copy your whole `~/.config/axiom/config.json`. The export already leaves out your monitors' names (a bar or dock keeps only its place: `#2`, `@primary`), wallpapers, accounts and paths.
+
+Export from an up-to-date axiom: CI checks your setup against axiom's current `main`, and a setting that has since become personal (or a command) fails the check.
 
 ## 3. Screenshot it
 
@@ -26,9 +28,9 @@ Up to three more go in `extra/` (at most 2 MB each).
 
 ## 4. Optional: your own palette
 
-If `Appearance.theme` in your export isn't one of [axiom's themes](https://github.com/axiom-dotfiles/axiom/tree/main/config/themes), bundle it:
+If `Appearance.theme` in your export isn't one of [axiom's themes](https://github.com/axiom-shell/axiom/tree/main/config/themes), bundle it:
 - A theme generated from your wallpaper is in `~/.local/state/axiom/themes/<name>.json`.
-- A new one starts as a copy of axiom's [`config/themes/template/theme.json`](https://github.com/axiom-dotfiles/axiom/blob/main/config/themes/template/theme.json).
+- A new one starts as a copy of axiom's [`config/themes/template/theme.json`](https://github.com/axiom-shell/axiom/blob/main/config/themes/template/theme.json).
 
 Save it as `theme.json`, fill in its `name` and `author`, and set `Appearance.theme` in `config.json` to `community/<id>`. Submitting through an issue does that renaming for you.
 
@@ -40,7 +42,7 @@ One wallpaper (`wallpaper.png`, `.jpg` or `.webp`, at most 10 MB) that you made,
 
 ### Through an issue (no git)
 
-Open [Submit a setup](https://github.com/axiom-dotfiles/community-setups/issues/new?template=01-submit-setup.yml), fill in the fields, paste `config.json` and drag your screenshot in. A workflow checks it, opens a pull request for you and comments with the result. Edit the issue to fix anything, and the pull request follows.
+Open [Submit a setup](https://github.com/axiom-shell/community-setups/issues/new?template=01-submit-setup.yml), fill in the fields, paste `config.json` and drag your screenshot in. A workflow checks it, opens a pull request for you and comments with the result. Edit the issue to fix anything, and the pull request follows.
 
 ### As a pull request
 

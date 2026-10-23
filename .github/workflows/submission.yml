@@ -43,7 +43,7 @@ jobs:
           auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
           git -c http.extraheader="AUTHORIZATION: basic $auth" fetch -q --depth=1 origin main
           git checkout -q -B main FETCH_HEAD
-          git clone -q --depth=1 https://github.com/axiom-dotfiles/axiom .axiom
+          git clone -q --depth=1 https://github.com/axiom-shell/axiom .axiom
 
       - name: Build the setup from the issue
         id: build
