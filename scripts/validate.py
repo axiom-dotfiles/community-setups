@@ -2,12 +2,15 @@
 """Check community setups against axiom's schema.
 
     scripts/validate.py [--axiom DIR] [--fix] [ID ...]
+    scripts/validate.py --migrated FILE --upgrade ID ...   (scripts/check.sh --upgrade)
     scripts/validate.py --pr-author USER --changed ID,ID --base-rev REV   (CI)
 
 With no IDs, checks every setup, or with --changed only those (CI: a setup
 is checked when it's posted or changed, never again later, since axiom
 migrates an older setup's config when it's applied). --fix writes config.json's `_example`
-header from setup.json. Exits 1 when any setup has an error.
+header from setup.json. --upgrade rewrites config.json as an Export from
+this axiom would hold it (ci/tst_Setups.qml's `exported`), for a maintainer
+to bring a setup up to a new schema. Exits 1 when any setup has an error.
 """
 
 import argparse
@@ -17,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from setups import ROOT, SETUPS, Axiom, Report, check_setup
+from setups import ROOT, SETUPS, Axiom, Report, check_setup, write_json
 
 
 def maintainers():
@@ -67,6 +70,7 @@ def main():
     parser.add_argument("--root", help="folder holding the setups (default: setups/)")
     parser.add_argument("--dump-input", metavar="FILE", help="write ci/tst_Setups.qml's input and stop (scripts/check.sh)")
     parser.add_argument("--migrated", metavar="FILE", help="ci/tst_Setups.qml's output: check the configs as axiom loads them")
+    parser.add_argument("--upgrade", action="store_true", help="with --migrated and IDs: rewrite each config.json as this axiom exports it, then stop")
     args = parser.parse_args()
 
     axiom = Axiom.locate(args.axiom)
@@ -98,6 +102,20 @@ def main():
     loaded = {}
     if args.migrated:
         loaded = json.loads(Path(args.migrated).read_text())
+
+    if args.upgrade:
+        if not (args.migrated and args.ids):
+            sys.exit("--upgrade needs --migrated and the setups' IDs (scripts/check.sh --upgrade ID…)")
+        for f in folders:
+            entry = loaded.get(f.name, {})
+            if "exported" not in entry:
+                sys.exit(f"{f.name}: axiom can't load it: {entry.get('exception', 'not loaded')}")
+            manifest = json.loads((f / "setup.json").read_text())
+            header = {"title": manifest.get("title", ""), "description": manifest.get("description", "")}
+            body = {k: v for k, v in entry["exported"].items() if k not in ("_example", "version")}
+            write_json(f / "config.json", {"_example": header, "version": axiom.version, **body})
+            print(f"{f.name}: config.json upgraded to axiom config version {axiom.version}")
+        return
     reports = [check_setup(f, axiom, fix=args.fix, loaded=loaded.get(f.name)) for f in folders]
 
     if args.pr_author and changed and args.pr_author.lower() not in maintainers():
@@ -132,7 +150,7 @@ def main():
                 if github:
                     print(f"::{kind} file={rel}/{file}::{message}")
     if not args.migrated:
-        print("(not migrated first: run scripts/check.sh for the full check)")
+        print("(not loaded by axiom, so neither migrated nor scope-checked: run scripts/check.sh for the full check)")
     if not reports:
         print("No setups to check.")
         summary.append("No setups to check.")

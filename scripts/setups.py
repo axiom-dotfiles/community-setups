@@ -1,9 +1,10 @@
 """Shared checks for community setups.
 
-The scope rules are axiom's own: a setup's config is walked along axiom's
-config.schema.json the way ConfigExamples.pick walks it (components/methods/
-ConfigExamples.qml), so what this repo accepts is exactly the `look` part
-axiom would apply from it. Nothing here hard-codes a config section.
+The scope rules are axiom's own: ci/tst_Setups.qml runs each config through
+axiom's ConfigMigration and ConfigExamples.pick (components/methods/), and
+what pick leaves out comes back here as `dropped`. So what this repo accepts
+is exactly the part axiom would apply from it, and nothing here hard-codes
+a config section, a scope or a schema annotation.
 """
 
 import hashlib
@@ -80,97 +81,19 @@ class Axiom:
             "No axiom checkout: pass --axiom DIR, set AXIOM_DIR, or clone axiom into .axiom/"
         )
 
-    def resolve(self, node):
-        """A $ref's definition, with the keys beside the $ref over it (SchemaValidation._resolve)"""
-        if isinstance(node, dict) and "$ref" in node:
-            name = node["$ref"].replace("#/definitions/", "")
-            definition = self.schema.get("definitions", {}).get(name)
-            if definition is None:
-                return node
-            extra = {k: v for k, v in node.items() if k != "$ref"}
-            return {**definition, **extra} if extra else definition
-        return node
 
-    def node(self, value, schema, scope):
-        """(schema, scope) for `value` at `schema`, oneOf discriminated by `type` (ConfigExamples._node)"""
-        node = self.resolve(schema)
-        if isinstance(node, dict):
-            scope = node.get("x-scope", scope)
-            if "oneOf" in node:
-                node = self.discriminate(value, node)
-        if isinstance(node, dict):
-            scope = node.get("x-scope", scope)
-        return node if isinstance(node, dict) else None, scope
-
-    def discriminate(self, value, node):
-        if not isinstance(value, dict):
-            return None
-        for option in node["oneOf"]:
-            option = self.resolve(option)
-            const = option.get("properties", {}).get("type", {}).get("const")
-            if const is not None and const == value.get("type"):
-                return option
-        return None
-
-    @staticmethod
-    def child(node, key):
-        if key in node.get("properties", {}):
-            return node["properties"][key]
-        extra = node.get("additionalProperties")
-        return extra if isinstance(extra, dict) else None
+# Why axiom leaves a value out of a shared file, by its scope (x-scope, or
+# "takeover" for x-takeover). A scope axiom adds later gets the fallback.
+SCOPE_MESSAGES = {
+    "takeover": "takes something over on the PC (compositor mode, locker, idle, polkit, greeter) and is never shared",
+    "personal": "personal (keybinds, apps, preferences): export again with personal settings off",
+    "commands": "runs a command as you: export again with commands off",
+    "machine": "belongs to the PC it was made on (monitor names, wallpapers, accounts, paths), never shared",
+}
 
 
-def scope_problems(config, axiom):
-    """Every place `config` holds something axiom wouldn't take from a shared
-    file: ([(path, scope)], [(path, why)]) for errors and warnings. Errors are
-    personal or machine values and takeover settings; warnings are keys or
-    types the current schema doesn't know (usually an older version's)."""
-    errors, warnings = [], []
-
-    def walk(value, schema, scope, path):
-        node, scope = axiom.node(value, schema, scope)
-        if node is not None and node.get("x-takeover") is True:
-            errors.append((path, "takeover"))
-            return
-        keep = scope == "look"
-        if isinstance(value, list):
-            if not keep:
-                errors.append((path, scope))
-                return
-            items = node.get("items") if node else None
-            for i, item in enumerate(value):
-                if items is not None:
-                    walk(item, items, scope, f"{path}[{i}]")
-            return
-        if isinstance(value, dict):
-            if node is None:
-                if keep:
-                    warnings.append((path, f"unknown type {value.get('type')!r}"))
-                else:
-                    errors.append((path, scope))
-                return
-            for key, sub in value.items():
-                child = axiom.child(node, key)
-                sub_path = f"{path}.{key}" if path else key
-                if child is None:
-                    if sub not in ({}, []):  # an empty leftover axiom prunes
-                        warnings.append((sub_path, "unknown key"))
-                else:
-                    walk(sub, child, scope, sub_path)
-            return
-        if not keep:
-            errors.append((path, scope))
-
-    root = axiom.schema
-    for key, value in config.items():
-        if key in ("_example", "version"):
-            continue
-        child = Axiom.child(root, key)
-        if child is None:
-            warnings.append((key, "unknown section"))
-        else:
-            walk(value, child, root.get("x-scope", "machine"), key)
-    return errors, warnings
+def scope_message(scope):
+    return SCOPE_MESSAGES.get(scope, f"{scope!r} scope, which a shared setup never holds: export it again")
 
 
 # ---------------------------------------------------------------- files ---
@@ -287,8 +210,8 @@ def check_theme(theme, setup_id, manifest, axiom, report):
 
 def check_setup(folder, axiom, fix=False, loaded=None):
     """All the checks for one setups/<id>/ folder. `loaded`: its entry from
-    ci/tst_Setups.qml (the config migrated and loaded by axiom's own code);
-    without it the config is checked as written, against the current schema."""
+    ci/tst_Setups.qml (the config migrated, loaded and picked by axiom's own
+    code); without it the config's scopes aren't checked."""
     folder = Path(folder)
     setup_id = folder.name
     report = Report(setup_id)
@@ -362,28 +285,21 @@ def check_setup(folder, axiom, fix=False, loaded=None):
     elif version > axiom.version:
         report.error(f"version {version} is newer than axiom main ({axiom.version})", "config.json")
 
-    checked = config
     if loaded is not None:
         if "exception" in loaded:
             report.error(f"axiom can't load it: {loaded['exception']}", "config.json")
             return report
-        checked = loaded["migrated"]
         if loaded["secrets"]:
             report.error(f"holds secrets ({', '.join(loaded['secrets'])}): never share an API key; export again", "config.json")
         for message in loaded["errors"]:
             report.error(f"invalid once loaded: {message}", "config.json")
         for message in loaded["applyErrors"]:
             report.error(f"invalid once applied: {message}", "config.json")
-    errors, warnings = scope_problems(checked, axiom)
-    for path, scope in errors:
-        if scope == "takeover":
-            report.error(f"{path}: takes something over on the PC (compositor mode, locker, idle, polkit, greeter) and is never shared", "config.json")
-        elif scope == "personal":
-            report.error(f"{path}: personal (keybinds, apps, commands): export again with those switched off", "config.json")
-        else:
-            report.error(f"{path}: belongs to the PC it was made on (monitors, wallpapers, accounts, paths), never shared", "config.json")
-    for path, why in warnings:
-        report.warn(f"{path}: {why} in axiom {axiom.version}" + (" (after migrating)" if loaded is not None else "") + ": axiom ignores it", "config.json")
+        for item in loaded["dropped"]:
+            report.error(f"{item['path']}: {scope_message(item['scope'])}", "config.json")
+        for path in loaded["removed"]:
+            if path != "_example":
+                report.warn(f"{path}: unknown in axiom {axiom.version} (after migrating): axiom ignores it", "config.json")
 
     # The header: setup.json is the source of truth
     header = {"title": manifest.get("title", ""), "description": manifest.get("description", "")}

@@ -3,7 +3,7 @@
     "title": "Big Pills Expanded",
     "description": "Test e2e lkjasdlfkjasdflkjasdflkjasdflkjasdflkajsdflkajsdflkasjdflkajsdflkasjdflkajsdflkajsdflkajsdflkjasdflkj"
   },
-  "version": 69,
+  "version": 75,
   "Appearance": {
     "theme": "rose-pine",
     "font": {
@@ -567,8 +567,7 @@
       {
         "type": "Monitors"
       }
-    ],
-    "size": 120
+    ]
   },
   "Bars": [
     {
@@ -685,7 +684,8 @@
         ]
       },
       "lockCenter": true,
-      "separatorStyle": "slash"
+      "separatorStyle": "slash",
+      "monitor": "@primary"
     }
   ],
   "OSD": {
@@ -696,27 +696,16 @@
         "alongEdge": true,
         "bars": [
           {
-            "icon": "web",
-            "type": "app"
-          },
-          {
-            "icon": "chat",
-            "type": "app"
-          },
-          {
             "icon": "stadia_controller",
             "type": "other"
-          },
-          {
-            "icon": "music_note",
-            "type": "app"
           },
           {
             "type": "master"
           }
         ],
         "name": "Deej",
-        "showPercent": false
+        "showPercent": false,
+        "monitor": "@primary"
       },
       {
         "id": "osd",
@@ -733,7 +722,8 @@
         "alongEdge": true,
         "openOnHover": true,
         "showPercent": false,
-        "edge": "Right"
+        "edge": "Right",
+        "monitor": "@primary"
       }
     ]
   },
@@ -848,7 +838,8 @@
       "length": "edge",
       "moduleBorders": false,
       "pinButton": true,
-      "openOnHover": true
+      "openOnHover": true,
+      "monitor": "@primary"
     },
     {
       "id": "right-menu",
@@ -901,7 +892,8 @@
       "length": "edge",
       "pinButton": true,
       "moduleScale": 69,
-      "offset": -200
+      "offset": -200,
+      "monitor": "@primary"
     },
     {
       "id": "menu-1",
@@ -928,7 +920,8 @@
       "pinButton": true,
       "offset": 7,
       "moduleBorders": false,
-      "fineGrid": true
+      "fineGrid": true,
+      "monitor": "@primary"
     },
     {
       "id": "menu-3",
@@ -945,7 +938,8 @@
         }
       ],
       "pinButton": true,
-      "offset": -2
+      "offset": -2,
+      "monitor": "@primary"
     },
     {
       "id": "menu-2",
@@ -1016,7 +1010,8 @@
       "moduleBorders": false,
       "openDelay": 8,
       "fineGrid": true,
-      "pinButton": true
+      "pinButton": true,
+      "monitor": "@primary"
     },
     {
       "id": "menu-4",
@@ -1034,7 +1029,8 @@
         }
       ],
       "mode": "submenu",
-      "fineGrid": true
+      "fineGrid": true,
+      "monitor": "@primary"
     },
     {
       "id": "menu-5",
@@ -1052,7 +1048,8 @@
       "edge": "Top",
       "offset": -6,
       "gridOffset": -37,
-      "popoutAtWidget": true
+      "popoutAtWidget": true,
+      "monitor": "@primary"
     }
   ],
   "Dock": {
@@ -1063,7 +1060,8 @@
         "closeDelay": 260,
         "iconSize": 35,
         "magnify": true,
-        "detached": false
+        "detached": false,
+        "monitor": "@primary"
       }
     ]
   },
@@ -1179,7 +1177,12 @@
             "h": 8
           }
         }
-      ]
+      ],
+      "monitor": "@primary"
+    },
+    "all": {
+      "enabled": false,
+      "monitor": "@primary"
     }
   },
   "WindowLook": {
@@ -1197,5 +1200,14 @@
     "shadowColor": "base0D",
     "dim": true,
     "shadowStrength": 90
-  }
+  },
+  "Greeter": {},
+  "Launcher": {},
+  "Hyprland": {
+    "managed": {}
+  },
+  "Sway": {},
+  "Niri": {},
+  "Input": {},
+  "Calendar": {}
 }

@@ -75,7 +75,11 @@ CASES = {
     "good": (lambda f: None, None),
     "good-bundled-theme": (bundled_theme, None),
     "good-wallpaper": (lambda f: (f.__setitem__("wallpaper.jpg", (2560, 1440)), f["setup.json"].__setitem__("wallpaper", {"license": "CC0-1.0", "source": "own"})), None),
-    "personal-apps": (with_config(lambda c: c.__setitem__("Apps", {"terminal": "kitty"})), "personal"),
+    "good-monitor-places": (with_config(lambda c: c.__setitem__("Bars", [{"id": "a", "monitor": "@primary"}, {"id": "b", "monitor": "#2"}, {"id": "c", "monitor": "*"}])), None),
+    "good-default-personal": (with_config(lambda c: c.__setitem__("Apps", {"pinned": []})), None),
+    "personal-apps": (with_config(lambda c: c.__setitem__("Apps", {"pinned": ["firefox"]})), "personal"),
+    "personal-osd-app-bar": (with_config(lambda c: c.__setitem__("OSD", {"osds": [{"id": "o", "bars": [{"type": "master"}, {"type": "app", "icon": "web"}]}]})), "OSD.osds[0].bars[1]: personal"),
+    "commands-terminal": (with_config(lambda c: c.__setitem__("Apps", {"terminal": "foot"})), "runs a command"),
     "machine-monitor": (with_config(lambda c: c.__setitem__("Bars", [{"id": "b", "monitor": "DP-1"}])), "belongs to the PC"),
     "takeover": (with_config(lambda c: c.__setitem__("Compositor", {"mode": "managed"})), "takes something over"),
     "newer-version": (with_config(lambda c: c.__setitem__("version", 9999)), "newer than axiom"),
@@ -142,7 +146,23 @@ def main():
             if not ok:
                 print("     expected " + ("a pass" if expected is None else f"a failure with {expected!r}"))
                 print("     " + output.strip().replace("\n", "\n     "))
-        print(f"\n{len(CASES) - failures}/{len(CASES)} cases ok")
+        # --upgrade rewrites a setup as this axiom exports it: what it can't
+        # share is left out, and the setup passes
+        files = good(axiom)
+        files["config.json"]["OSD"] = {"osds": [{"id": "o", "bars": [{"type": "master"}, {"type": "app", "icon": "web"}]}]}
+        write_setup(tmp / "upgrade", files)
+        run = subprocess.run(
+            [str(ROOT / "scripts" / "check.sh"), "--axiom", str(axiom.path), "--root", str(tmp), "--upgrade", "upgrade"],
+            capture_output=True, text=True, env=env,
+        )
+        bars = json.loads((tmp / "upgrade" / "config.json").read_text())["OSD"]["osds"][0]["bars"]
+        ok = run.returncode == 0 and bars == [{"type": "master"}]
+        failures += not ok
+        print(f"{'ok  ' if ok else 'FAIL'} upgrade")
+        if not ok:
+            print("     " + (run.stdout + run.stderr).strip().replace("\n", "\n     "))
+        total = len(CASES) + 1
+        print(f"\n{total - failures}/{total} cases ok")
         sys.exit(1 if failures else 0)
     finally:
         shutil.rmtree(tmp)
